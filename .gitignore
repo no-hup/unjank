@@ -1,0 +1,4 @@
+.perf/
+.DS_Store
+.vscode/
+.agents/

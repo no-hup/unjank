@@ -1,0 +1,146 @@
+================================================================================
+Firebase Performance Skills Suite — Requirements
+================================================================================
+
+1. SKILL SUITE ARCHITECTURE
+   - 3 skills with clear separation of concerns:
+     * perf-setup:     Discovery + validation + smoke test
+     * perf-query:     Cost-optimized BigQuery queries → structured JSON
+     * perf-dashboard: JSON → interactive local HTML dashboard
+   - Skills communicate via files on disk in .perf/ directory
+   - Each skill is independently re-runnable
+   - Follow anthropics/skills community format for distribution
+   - Works for Android, iOS, and Flutter projects
+
+2. PROJECT/APP ID DISCOVERY (perf-setup)
+   - Android: parse google-services.json for project_info.project_id and
+     client[].client_info.android_client_info.package_name
+   - iOS: parse GoogleService-Info.plist for PROJECT_ID and BUNDLE_ID
+     (via /usr/libexec/PlistBuddy)
+   - Flutter: check both android/app/google-services.json and
+     ios/Runner/GoogleService-Info.plist
+   - Handle multiple config files (build flavors): list all, ask user to pick
+   - Handle CI/CD injection (no config files in repo): ask developer for
+     GCP project ID and app ID manually
+   - Handle monorepo: detect multiple project IDs, ask which one
+   - Handle applicationIdSuffix: warn that base ID (without suffix) is needed
+
+3. FIREBASE PERFORMANCE INTEGRATION CHECKS (perf-setup)
+   - Android: grep build.gradle* for com.google.firebase:firebase-perf
+     dependency AND com.google.firebase.perf plugin
+   - iOS: grep Podfile for FirebasePerformance OR Package.swift for
+     firebase-ios-sdk; check AppDelegate for FirebaseApp.configure()
+   - Flutter: grep pubspec.yaml for firebase_performance dependency
+   - If SDK missing: show platform-specific install instructions (WARNING,
+     not blocking)
+   - Warn that metrics take up to 48 hours to appear after enablement
+
+4. BIGQUERY READINESS AND AUTH WORKFLOW (perf-setup)
+   - Sequential validation gates:
+     a) gcloud CLI installed? (which gcloud) → if not, STOP with install link
+     b) gcloud logged in? (gcloud auth list) → if not, STOP with login command
+     c) Correct project? (gcloud config get-value project) → auto-set if mismatch
+     d) Ask user to confirm active account is correct (personal vs work)
+     e) ADC available? (gcloud auth application-default print-access-token) →
+        if not, STOP with login command
+   - BigQuery table validation:
+     * Construct table: {projectId}.firebase_performance.{appId_underscores}_{PLATFORM}
+     * bq show to verify table exists → if not, STOP with Firebase Console
+       instructions to enable BigQuery export
+   - Smoke test: COUNT(*) query on 7-day window
+     * If > 0: pass
+     * If = 0: WARNING (not blocking) about 48h data delay
+
+5. QUERY EXECUTION STRATEGY (perf-query)
+   - Read config from .perf/config.json (fail if missing → "run /perf-setup")
+   - Dry-run cost estimation before executing any real query:
+     * bq query --dry_run for all 3 queries
+     * Sum totalBytesProcessed, calculate cost at $5/TB
+     * Display estimate to developer
+     * > 10 GB: warn and ask to proceed
+     * > 100 GB: STOP (likely broken partition pruning)
+   - Execute 3 queries via bq CLI:
+     a) screen_summary: 30-day aggregate per screen (top 50 by volume)
+     b) screen_daily: 30-day daily for TOP 10 screens only (cost optimization)
+     c) app_daily_trend: 30-day app-level daily aggregate
+   - Cost optimization:
+     * _PARTITIONTIME filter = mandatory partition pruning
+     * Top-N screen filter on daily query avoids scanning all screens
+     * --dry_run = free preview before executing
+     * --max_rows caps output transfer
+     * Typical cost: < $0.05 for 30 days (well under 1 TB free tier)
+   - Data quality filters (applied to all queries):
+     * event_type = 'SCREEN_TRACE'
+     * trace_info.screen_info IS NOT NULL
+     * frozen_frame_ratio BETWEEN 0 AND 1
+     * slow_frame_ratio BETWEEN 0 AND 1
+     * HAVING sample_count >= min_samples (configurable, default 50)
+   - Output format: JSON files in .perf/data/
+     * screen_summary.json: [{screen_name, total_samples, frozen_frames_pct,
+       slow_render_pct}]
+     * screen_daily.json: [{date, screen_name, frozen_frames_pct,
+       slow_render_pct, sample_count}]
+     * app_daily_trend.json: [{date, frozen_frames_pct, slow_render_pct,
+       sample_count}]
+     * query_metadata.json: {queried_at, bytes_scanned, estimated_cost_usd,
+       screen_count, top_screens_queried}
+
+6. DASHBOARD GENERATION (perf-dashboard)
+   - Self-contained HTML file at .perf/dashboard.html
+   - Chart.js 4.x loaded from CDN (https://cdn.jsdelivr.net/npm/chart.js@4)
+   - All data embedded as inline JSON in <script> blocks
+   - Three tabs:
+     a) Worst Performing: horizontal bar chart (top 15 by composite score:
+        frozen*0.6 + slow*0.4) + table with 7d-vs-30d trend arrows
+     b) Highest Volume: horizontal bar chart (top 15 by total_samples) + table
+     c) 30-Day Trends: dual-axis line chart (frozen + slow over time) +
+        sparkline rows for top 5 screens
+   - Color thresholds:
+     * Frozen: > 5% = red, 2-5% = yellow, < 2% = green
+     * Slow: > 10% = red, 5-10% = yellow, < 5% = green
+   - Summary cards in header: total screens, worst frozen %, worst slow %,
+     data freshness
+   - Footer: table name, query cost, date range
+   - Auto-open in browser (macOS: open, Linux: xdg-open, Windows: explorer.exe)
+   - Template-based: dashboard-template.html bundled with skill, placeholders
+     replaced at generation time
+
+7. DATA CONTRACT BETWEEN SKILLS
+   - perf-setup writes: .perf/config.json
+     {version, created_at, platform, gcp_project_id, app_id, table_name,
+      gcloud_account, lookback_days, min_samples, min_daily_samples, max_screens}
+   - perf-query reads config, writes: .perf/data/*.json (schemas above)
+   - perf-dashboard reads data, writes: .perf/dashboard.html
+   - .perf/ directory added to .gitignore automatically
+
+8. EDGE CASES AND FAILURE HANDLING
+   - Platform not detected → STOP with clear message
+   - Config files missing (CI/CD) → ASK developer for values
+   - Multiple config files (flavors) → ASK which one
+   - Firebase SDK missing → WARN with install steps (not blocking)
+   - gcloud not installed → STOP with install link
+   - gcloud wrong account → ASK to confirm/re-login
+   - No BigQuery permissions → STOP with role names needed
+   - Table not found → STOP with Firebase Console BigQuery export instructions
+   - Empty data (0 rows) → STOP with 48h delay explanation
+   - All metrics zero → INFO "app performing well"
+   - Cost > 100 GB → STOP (broken partitioning)
+   - Cost > 10 GB → WARN and ask to proceed
+   - bq not found → guide gcloud components install bq
+   - Query timeout → suggest reducing lookback_days
+   - Auth expired → guide re-authentication
+   - Browser open fails → show file path for manual opening
+   - Stale config (> 30 days old) → WARN to re-run setup
+
+9. PREREQUISITES
+   - gcloud CLI installed and authenticated
+   - Firebase Performance SDK integrated in the app
+   - BigQuery export enabled in Firebase Console (one-time, ~48h for data)
+   - BigQuery permissions: roles/bigquery.dataViewer + roles/bigquery.jobUser
+   - Claude Code (to run the skills)
+   - Internet connection (for Chart.js CDN in dashboard)
+
+10. FLUTTER-SPECIFIC BEHAVIOR
+    - Separate dashboards per platform (not combined)
+    - Run /perf-setup once per platform (Android then iOS)
+    - Config stores one platform at a time; re-run setup to switch
