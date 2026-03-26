@@ -17,11 +17,18 @@ Agent skills for tracking and fixing screen rendering performance in Android, iO
 
 ### 1. Install the skills
 
-Copy the skill directories into your app project:
+Run this from your project root:
 
 ```bash
-cp -r skills/perf-setup skills/perf-query skills/perf-dashboard skills/perf-fix \
-  /path/to/your/app/.claude/skills/
+curl -fsSL https://raw.githubusercontent.com/no-hup/unjank/main/install.sh | bash
+```
+
+Or install manually:
+
+```bash
+git clone https://github.com/no-hup/unjank.git /tmp/unjank
+cp -r /tmp/unjank/skills/perf-{setup,query,dashboard,fix} .claude/skills/
+rm -rf /tmp/unjank
 ```
 
 ### 2. Run the workflow
@@ -109,3 +116,9 @@ skills/
 - **Cost-optimized** — partition pruning + dry-run estimation before every query (~$0.05 for 30 days)
 - **Helper scripts** for deterministic operations (config parsing, SQL templating, dashboard assembly)
 - **Agent-agnostic** — scripts use `dirname "$0"` instead of Claude-specific variables
+
+## Analytics
+
+The install script pings an anonymous hit counter ([hits.sh](https://hits.sh)) so we know how many people are using Unjank. **No personal data is collected** — it just increments a number.
+
+To opt out: `curl -fsSL ... | UNJANK_NO_ANALYTICS=1 bash`
