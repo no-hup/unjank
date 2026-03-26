@@ -2,3 +2,4 @@
 .DS_Store
 .vscode/
 .agents/
+node_modules/

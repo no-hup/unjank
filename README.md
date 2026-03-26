@@ -20,12 +20,16 @@ Agent skills for tracking and fixing screen rendering performance in Android, iO
 Run this from your project root:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/no-hup/unjank/main/install.sh | bash
+npx unjank-perf
 ```
 
-Or install manually:
+Alternative methods:
 
 ```bash
+# curl one-liner
+curl -fsSL https://raw.githubusercontent.com/no-hup/unjank/main/install.sh | bash
+
+# manual
 git clone https://github.com/no-hup/unjank.git /tmp/unjank
 cp -r /tmp/unjank/skills/perf-{setup,query,dashboard,fix} .claude/skills/
 rm -rf /tmp/unjank

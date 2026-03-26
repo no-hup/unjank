@@ -1,0 +1,30 @@
+{
+  "name": "unjank-perf",
+  "version": "1.0.0",
+  "description": "Firebase performance skills for AI coding agents — track and fix screen rendering issues",
+  "bin": {
+    "unjank-perf": "./bin/install.js"
+  },
+  "keywords": [
+    "claude-code",
+    "firebase",
+    "performance",
+    "android",
+    "flutter",
+    "ios",
+    "bigquery",
+    "ai-agent",
+    "skills"
+  ],
+  "author": "no-hup",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/no-hup/unjank.git"
+  },
+  "homepage": "https://github.com/no-hup/unjank",
+  "files": [
+    "bin/",
+    "skills/"
+  ]
+}
