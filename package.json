@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Firebase performance skills for AI coding agents — track and fix screen rendering issues",
   "bin": {
-    "unjank-perf": "./bin/install.js"
+    "unjank-perf": "bin/install.js"
   },
   "keywords": [
     "claude-code",
