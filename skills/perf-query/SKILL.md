@@ -13,6 +13,15 @@ allowed-tools: Bash, Read, Write
 
 Fetch screen rendering performance data from BigQuery using cost-optimized queries. This skill uses a helper script for deterministic SQL templating and query execution.
 
+## IMPORTANT: Autonomous Execution
+
+Run all steps without asking for confirmation. Proceed from config validation through query execution to summary output in one continuous flow. **Only pause when:**
+- Cost estimate exceeds 10 GB (ask before proceeding)
+- Authentication has expired (tell the user what to run)
+- A query returns zero results (report and stop)
+
+**Do NOT ask** "Should I proceed?" between steps. Just execute.
+
 ## Step 1: Read Configuration
 
 Read `.perf/config.json`. If the file doesn't exist, STOP: "No configuration found. Run `/perf-setup` first."
@@ -59,12 +68,14 @@ bash {script_path}/run_bq_query.sh app_daily_trend.sql /dev/null --dry-run
 
 Each dry-run outputs `{"bytes_processed": N}`. Sum the bytes across all queries. Calculate cost: `total_bytes / 1e12 * 5.00` (BigQuery on-demand = $5/TB).
 
-Display: "Estimated scan: {X} GB (~${Y}). First 1 TB/month is free on BigQuery."
+Display the cost estimate. Many frontend developers have never used BigQuery, so briefly explain:
+
+"Estimated scan: **{X} GB** (~${Y}). For context: Google BigQuery gives you **1 TB of free queries per month** — this is well within that. Typical Unjank runs scan 0.5–2 GB, so you'd need to run this 500+ times in a month before any charges apply."
 
 **Cost gates:**
 - \> 100 GB: STOP. "Estimated scan is unusually large ({size} GB). This may indicate the table is not partitioned correctly."
 - \> 10 GB: WARN and ask: "Estimated scan is {size} GB (~${cost}). This is larger than typical. Proceed?"
-- <= 10 GB: proceed automatically.
+- <= 10 GB: proceed automatically — do NOT ask for confirmation.
 
 ## Step 5: Execute Screen Summary Query
 

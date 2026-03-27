@@ -13,6 +13,10 @@ allowed-tools: Bash, Read, Write
 
 Generate a self-contained HTML dashboard from BigQuery performance data. This skill uses a helper script for deterministic template assembly.
 
+## IMPORTANT: Autonomous Execution
+
+Run all steps without asking for confirmation. Verify data, assemble dashboard, open in browser, and print summary — all in one go. **Only pause if** data files are missing (tell the user to run `/perf-query` first). Do NOT ask "Ready to proceed?" or "Should I open the dashboard?"
+
 ## Step 1: Verify Data Exists
 
 Check that these files exist:
