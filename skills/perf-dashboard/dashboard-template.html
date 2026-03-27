@@ -76,14 +76,15 @@
   }
 
   .hero {
-    display: grid;
-    grid-template-columns: minmax(0, 1.65fr) minmax(280px, 0.95fr);
-    gap: 24px;
-    padding: 30px;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 18px 24px;
     border-radius: var(--radius-xl);
     border: 1px solid var(--border);
     background: linear-gradient(140deg, rgba(255, 255, 255, 0.9), rgba(248, 244, 237, 0.78));
     box-shadow: var(--shadow);
+    flex-wrap: wrap;
   }
 
   .eyebrow {
@@ -99,6 +100,7 @@
     font-weight: 700;
     letter-spacing: 0.14em;
     text-transform: uppercase;
+    flex-shrink: 0;
   }
 
   .eyebrow::before {
@@ -110,74 +112,67 @@
     box-shadow: 0 0 0 5px rgba(47, 71, 93, 0.1);
   }
 
-  .hero h1 {
-    margin-top: 20px;
-    font-family: 'Newsreader', serif;
-    font-size: clamp(2.3rem, 4vw, 4rem);
-    line-height: 0.98;
-    font-weight: 600;
-    letter-spacing: -0.045em;
-    max-width: 10ch;
-  }
-
-  .hero p {
-    max-width: 56ch;
-    margin-top: 18px;
-    color: var(--ink-soft);
-    font-size: 15px;
-    line-height: 1.75;
+  .hero-divider {
+    width: 1px;
+    height: 28px;
+    background: var(--border-strong);
+    flex-shrink: 0;
   }
 
   .hero-meta {
-    display: grid;
-    gap: 14px;
-    align-content: start;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    flex-wrap: wrap;
+    flex: 1;
   }
 
-  .meta-panel {
-    padding: 18px 18px 16px;
-    border-radius: var(--radius-lg);
-    border: 1px solid var(--border);
-    background: var(--surface-muted);
+  .meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
   }
 
   .meta-label {
     color: var(--ink-faint);
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 700;
     letter-spacing: 0.12em;
     text-transform: uppercase;
   }
 
   .meta-value {
-    margin-top: 7px;
     color: var(--ink);
-    font-size: 15px;
-    line-height: 1.5;
+    font-size: 13px;
+    line-height: 1.4;
     font-weight: 600;
     word-break: break-word;
-  }
-
-  .meta-note {
-    margin-top: 6px;
-    color: var(--ink-soft);
-    font-size: 13px;
-    line-height: 1.6;
   }
 
   .platform-pill {
     display: inline-flex;
     align-items: center;
-    align-self: start;
-    padding: 8px 14px;
+    padding: 6px 12px;
     border-radius: 999px;
     border: 1px solid rgba(47, 71, 93, 0.14);
     background: rgba(47, 71, 93, 0.08);
     color: var(--accent);
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
+    flex-shrink: 0;
+  }
+
+  .hero-spacer {
+    flex: 1;
+  }
+
+  .hero-generated {
+    color: var(--ink-faint);
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
   }
 
   .summary-grid {
@@ -469,7 +464,22 @@
 
   @media (max-width: 980px) {
     .hero {
-      grid-template-columns: 1fr;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .hero-divider {
+      width: 100%;
+      height: 1px;
+    }
+
+    .hero-meta {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .hero-spacer {
+      display: none;
     }
 
     .section-head {
@@ -519,39 +529,33 @@
 <body>
 <main class="shell">
   <section class="hero">
-    <div>
-      <span class="eyebrow">Firebase Performance</span>
-      <h1>Rendering health, refined for decision-making.</h1>
-      <p>
-        A quieter, clearer view of screen rendering quality across your application,
-        designed to surface risk without visual noise.
-      </p>
-    </div>
+    <span class="eyebrow">Unjank</span>
+    <div class="hero-divider"></div>
     <div class="hero-meta">
-      <span class="platform-pill">{{PLATFORM}}</span>
-      <div class="meta-panel">
+      <div class="meta-item">
         <div class="meta-label">Application</div>
         <div class="meta-value">{{APP_ID}}</div>
-        <div class="meta-note">Generated {{GENERATED_AT}}</div>
       </div>
-      <div class="meta-panel">
+      <div class="meta-item">
         <div class="meta-label">Data Source</div>
         <div class="meta-value">{{TABLE_NAME}}</div>
-        <div class="meta-note">Rendered from the latest structured performance export.</div>
       </div>
+      <span class="platform-pill">{{PLATFORM}}</span>
     </div>
+    <div class="hero-spacer"></div>
+    <span class="hero-generated">{{GENERATED_AT}}</span>
   </section>
 
   <section class="summary-grid" id="summaryCards"></section>
 
   <section class="tab-shell">
     <div class="tabs">
-      <div class="tab active" data-tab="worst">Worst Performing</div>
+      <div class="tab active" data-tab="trends">30-Day Trends</div>
+      <div class="tab" data-tab="worst">Worst Performing</div>
       <div class="tab" data-tab="volume">Highest Volume</div>
-      <div class="tab" data-tab="trends">30-Day Trends</div>
     </div>
 
-    <div class="tab-content active" id="tab-worst">
+    <div class="tab-content" id="tab-worst">
       <div class="section-grid">
         <section class="section-card">
           <div class="section-head">
@@ -591,7 +595,7 @@
       </div>
     </div>
 
-    <div class="tab-content" id="tab-trends">
+    <div class="tab-content active" id="tab-trends">
       <div class="section-grid">
         <section class="section-card">
           <div class="section-head">
