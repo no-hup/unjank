@@ -22,34 +22,104 @@ elif ls *.xcodeproj >/dev/null 2>&1 || ls *.xcworkspace >/dev/null 2>&1 || [ -f 
   PLATFORM="IOS"
 fi
 
+# ---- Flavor selection helper ----
+# Given a list of config file paths, auto-select the production one.
+# Returns the path of the best match, or empty if ambiguous.
+select_prod_config() {
+  local files="$1"
+  local count
+  count=$(echo "$files" | wc -l | tr -d ' ')
+
+  # If only one file, return it
+  if [ "$count" -eq 1 ]; then
+    echo "$files"
+    return
+  fi
+
+  # Priority 1: Look for paths containing production indicators
+  # Common patterns: /prod/, /production/, /release/, /main/, /live/
+  local prod_patterns="prod production release main live"
+  for pattern in $prod_patterns; do
+    local match
+    match=$(echo "$files" | grep -i "/$pattern/" | head -1 || true)
+    if [ -n "$match" ]; then
+      echo "$match"
+      return
+    fi
+  done
+
+  # Priority 2: Exclude known non-prod paths
+  # Common patterns: /debug/, /staging/, /beta/, /dev/, /test/, /qa/, /uat/, /internal/
+  local non_prod_patterns="debug staging beta dev test qa uat internal sandbox mock demo"
+  local remaining="$files"
+  for pattern in $non_prod_patterns; do
+    local filtered
+    filtered=$(echo "$remaining" | grep -iv "/$pattern/" || true)
+    if [ -n "$filtered" ]; then
+      remaining="$filtered"
+    fi
+  done
+
+  # If filtering reduced to one file, use it
+  local remaining_count
+  remaining_count=$(echo "$remaining" | wc -l | tr -d ' ')
+  if [ "$remaining_count" -eq 1 ]; then
+    echo "$remaining"
+    return
+  fi
+
+  # Priority 3: Prefer the default/root-level config
+  # e.g., app/google-services.json over app/src/staging/google-services.json
+  local shortest=""
+  local shortest_len=9999
+  while IFS= read -r f; do
+    local len=${#f}
+    if [ "$len" -lt "$shortest_len" ]; then
+      shortest="$f"
+      shortest_len="$len"
+    fi
+  done <<< "$remaining"
+
+  echo "$shortest"
+}
+
+# Determine which flavor was selected
+get_flavor_name() {
+  local filepath="$1"
+  # Extract flavor from path like app/src/prod/google-services.json → prod
+  # Or ios/Targets/Production/GoogleService-Info.plist → Production
+  local flavor
+  flavor=$(echo "$filepath" | grep -oiE '(prod|production|release|debug|staging|beta|dev|test|qa|uat|internal|main|live|sandbox)[^/]*' | head -1 || true)
+  if [ -n "$flavor" ]; then
+    echo "$flavor"
+  else
+    # If no recognizable flavor in path, use parent directory name
+    echo "$(basename "$(dirname "$filepath")")"
+  fi
+}
+
 # ---- Firebase Config Discovery ----
 PROJECT_ID=""
 APP_ID=""
 CONFIG_FILE=""
 CONFIG_FILES_FOUND=""
+SELECTED_FLAVOR=""
 
 if [ "$PLATFORM" = "ANDROID" ] || [ "$PLATFORM" = "FLUTTER" ]; then
   # Search for google-services.json
-  if [ "$PLATFORM" = "FLUTTER" ]; then
-    SEARCH_PATHS="android/app/google-services.json"
-  else
-    SEARCH_PATHS="app/google-services.json"
-  fi
-
-  # Also search broadly
-  ALL_GS=$(find . -name "google-services.json" -not -path "*/build/*" -not -path "*/.gradle/*" 2>/dev/null || true)
+  ALL_GS=$(find . -name "google-services.json" -not -path "*/build/*" -not -path "*/.gradle/*" -not -path "*/node_modules/*" 2>/dev/null || true)
   CONFIG_FILES_FOUND="$ALL_GS"
 
-  # Pick the first match from preferred paths, then fallback to any found
   GS_FILE=""
-  for p in $SEARCH_PATHS; do
-    if [ -f "$p" ]; then
-      GS_FILE="$p"
-      break
+  if [ -n "$ALL_GS" ]; then
+    GS_COUNT=$(echo "$ALL_GS" | wc -l | tr -d ' ')
+    if [ "$GS_COUNT" -eq 1 ]; then
+      GS_FILE="$ALL_GS"
+    else
+      # Multiple configs found — auto-select production
+      GS_FILE=$(select_prod_config "$ALL_GS")
+      SELECTED_FLAVOR=$(get_flavor_name "$GS_FILE")
     fi
-  done
-  if [ -z "$GS_FILE" ] && [ -n "$ALL_GS" ]; then
-    GS_FILE=$(echo "$ALL_GS" | head -1)
   fi
 
   if [ -n "$GS_FILE" ]; then
@@ -91,23 +161,25 @@ fi
 
 if [ "$PLATFORM" = "IOS" ] || [ "$PLATFORM" = "FLUTTER" ]; then
   # Search for GoogleService-Info.plist
-  if [ "$PLATFORM" = "FLUTTER" ]; then
-    PLIST_SEARCH="ios/Runner/GoogleService-Info.plist"
-  else
-    PLIST_SEARCH=""
-  fi
-
-  ALL_PLIST=$(find . -name "GoogleService-Info.plist" -not -path "*/build/*" -not -path "*/Pods/*" 2>/dev/null || true)
+  ALL_PLIST=$(find . -name "GoogleService-Info.plist" -not -path "*/build/*" -not -path "*/Pods/*" -not -path "*/node_modules/*" 2>/dev/null || true)
 
   PLIST_FILE=""
-  if [ -n "$PLIST_SEARCH" ] && [ -f "$PLIST_SEARCH" ]; then
-    PLIST_FILE="$PLIST_SEARCH"
-  elif [ -n "$ALL_PLIST" ]; then
-    PLIST_FILE=$(echo "$ALL_PLIST" | head -1)
+  if [ -n "$ALL_PLIST" ]; then
+    PLIST_COUNT=$(echo "$ALL_PLIST" | wc -l | tr -d ' ')
+    if [ "$PLIST_COUNT" -eq 1 ]; then
+      PLIST_FILE="$ALL_PLIST"
+    else
+      # Multiple configs found — auto-select production
+      PLIST_FILE=$(select_prod_config "$ALL_PLIST")
+      if [ -z "$SELECTED_FLAVOR" ]; then
+        SELECTED_FLAVOR=$(get_flavor_name "$PLIST_FILE")
+      fi
+    fi
   fi
 
   if [ -n "$PLIST_FILE" ] && [ "$PLATFORM" != "ANDROID" ]; then
     CONFIG_FILE="$PLIST_FILE"
+    CONFIG_FILES_FOUND="$ALL_PLIST"
     # macOS has PlistBuddy; Linux may not
     if command -v /usr/libexec/PlistBuddy >/dev/null 2>&1; then
       PROJECT_ID=$(/usr/libexec/PlistBuddy -c "Print :PROJECT_ID" "$PLIST_FILE" 2>/dev/null || true)
@@ -165,6 +237,8 @@ cat <<EOF
   "app_id": "$APP_ID",
   "config_file": "$CONFIG_FILE",
   "config_files_count": $CONFIG_COUNT,
+  "config_files_list": $(echo "$CONFIG_FILES_FOUND" | python3 -c "import json,sys; print(json.dumps(sys.stdin.read().strip().split('\n')))" 2>/dev/null || echo '[]'),
+  "selected_flavor": "$SELECTED_FLAVOR",
   "has_application_id_suffix": $HAS_SUFFIX,
   "firebase_perf_sdk_found": $FIREBASE_PERF_FOUND
 }

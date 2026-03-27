@@ -67,9 +67,12 @@ for (const skill of SKILLS) {
 console.log(`
 Unjank installed to .claude/skills/
 
+IMPORTANT: Restart Claude Code (or start a new conversation) for the
+skills to register as slash commands (/perf-setup, /perf-query, etc.)
+
 Next steps:
-  1. gcloud auth login && gcloud auth application-default login
-  2. Open Claude Code and run: /perf-setup
+  1. Restart Claude Code or start a new conversation
+  2. Run: /perf-setup (it will handle gcloud auth and everything else)
 
 Full docs: https://github.com/no-hup/unjank
 `);

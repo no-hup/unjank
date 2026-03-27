@@ -35,10 +35,14 @@ cp -r /tmp/unjank/skills/perf-{setup,query,dashboard,fix} .claude/skills/
 rm -rf /tmp/unjank
 ```
 
-### 2. Run the workflow
+### 2. Restart Claude Code
+
+Skills register as slash commands on startup. **Start a new conversation** after installing.
+
+### 3. Run the workflow
 
 ```
-/perf-setup              # one-time: discovers config, validates BigQuery
+/perf-setup              # one-time: auto-installs gcloud if needed, discovers config, validates BigQuery
 /perf-query              # fetches 30-day performance data
 /perf-dashboard          # opens interactive dashboard in browser
 /perf-fix HomeFragment   # finds and fixes rendering issues for a screen
@@ -46,8 +50,9 @@ rm -rf /tmp/unjank
 
 ## Prerequisites
 
-- **gcloud CLI** installed and authenticated
 - **Firebase Performance SDK** integrated in your app
+- **BigQuery export enabled** in Firebase Console (Settings → Integrations → BigQuery)
+- **gcloud CLI** — `perf-setup` will install and configure it automatically if missing
 - **BigQuery export** enabled in Firebase Console (one-time, data takes ~48h)
 
 ### Authentication (simplest path)
