@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Firebase Performance Dashboard | {{APP_ID}}</title>
+<title>Unjank Perf | {{APP_ID}}</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap');
@@ -388,7 +388,7 @@
 
   .sparkline-row {
     display: grid;
-    grid-template-columns: minmax(180px, 220px) minmax(0, 1fr);
+    grid-template-columns: 220px minmax(0, 1fr);
     gap: 18px;
     align-items: center;
     padding: 14px 0;
@@ -404,6 +404,14 @@
     font-size: 13px;
     font-weight: 600;
     line-height: 1.45;
+    min-width: 0;
+  }
+
+  .sparkline-label .screen-name {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .sparkline-label small {
@@ -813,8 +821,8 @@ document.querySelectorAll('.tab').forEach(tab => {
         {
           label: 'Slow Render %',
           data: sorted.map(s => s.slow_render_pct),
-          backgroundColor: theme.warningFill,
-          borderColor: theme.warning,
+          backgroundColor: theme.accentFill,
+          borderColor: theme.accent,
           borderWidth: 1,
           borderRadius: 10,
           borderSkipped: false
@@ -899,8 +907,8 @@ document.querySelectorAll('.tab').forEach(tab => {
         {
           label: 'Slow Render %',
           data: sortedTrend.map(d => d.slow_render_pct),
-          borderColor: theme.warning,
-          backgroundColor: theme.warningFill,
+          borderColor: theme.accent,
+          backgroundColor: theme.accentFill,
           fill: true,
           tension: 0.34,
           pointRadius: 0,
@@ -918,7 +926,7 @@ document.querySelectorAll('.tab').forEach(tab => {
     if (daily.length === 0) return;
     const row = document.createElement('div');
     row.className = 'sparkline-row';
-    row.innerHTML = `<div class="sparkline-label" style="color:${severityColor(screen.frozen_frames_pct, screen.slow_render_pct)}">${screen.screen_name}<br><small>Frozen ${formatPct(screen.frozen_frames_pct)}</small></div><canvas class="sparkline-canvas" id="spark${idx}"></canvas>`;
+    row.innerHTML = `<div class="sparkline-label" style="color:${severityColor(screen.frozen_frames_pct, screen.slow_render_pct)}"><span class="screen-name" title="${screen.screen_name}">${screen.screen_name}</span><small>Frozen ${formatPct(screen.frozen_frames_pct)}</small></div><canvas class="sparkline-canvas" id="spark${idx}"></canvas>`;
     container.appendChild(row);
 
     new Chart(document.getElementById('spark' + idx), {
