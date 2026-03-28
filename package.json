@@ -1,6 +1,6 @@
 {
   "name": "unjank-perf",
-  "version": "1.0.0",
+  "version": "1.0.3",
   "description": "Firebase performance skills for AI coding agents — track and fix screen rendering issues",
   "bin": {
     "unjank-perf": "bin/install.js"
