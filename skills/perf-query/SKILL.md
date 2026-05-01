@@ -18,7 +18,7 @@ Fetch screen rendering performance data from BigQuery using cost-optimized queri
 ## IMPORTANT: Autonomous Execution
 
 Run all steps without asking for confirmation. Proceed from config validation through query execution to summary output in one continuous flow. **Only pause when:**
-- Cost estimate exceeds 10 GB (ask before proceeding)
+- Cost estimate exceeds 100 GB even after retrying at 15 and 7 days (explain and stop)
 - Authentication has expired (tell the user what to run)
 - A query returns zero results (report and stop)
 
@@ -162,4 +162,4 @@ Compare last 7 days average vs previous 23 days to determine trend direction.
 | Table not found | "BigQuery table not found. Re-run `/perf-setup`." |
 | Query timeout | "Query timed out. Try reducing lookback_days in `.perf/config.json`." |
 | All values zero | "No rendering issues detected. Your app is performing well." |
-| Dry-run > 100 GB | STOP. "Scan unexpectedly large. Check partition pruning." |
+| Dry-run > 100 GB at 7 days | STOP after retrying 30→15→7 day windows. "Check partition pruning." |
