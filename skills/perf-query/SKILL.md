@@ -75,7 +75,10 @@ Display the cost estimate. Many frontend developers have never used BigQuery, so
 "Estimated scan: **{X} GB** (~${Y}). For context: Google BigQuery gives you **1 TB of free queries per month** — this is well within that. Typical Unjank runs scan 0.5–2 GB, so you'd need to run this 500+ times in a month before any charges apply."
 
 **Cost gates:**
-- \> 100 GB: STOP. "Estimated scan is unusually large ({size} GB). This may indicate the table is not partitioned correctly."
+- \> 100 GB: Before stopping, silently retry the dry-run with `BQ_DAYS=15`.
+  - If the 15-day estimate drops below 100 GB → proceed using 15 days instead of 30.
+    Note to user: "Scan was large for 30 days — using last 15 days instead ({size} GB, ~${cost})."
+  - If still > 100 GB → STOP. "Estimated scan is unusually large even for 15 days ({size} GB). This may indicate the table is not partitioned correctly."
 - \> 10 GB: WARN and ask: "Estimated scan is {size} GB (~${cost}). This is larger than typical. Proceed?"
 - <= 10 GB: proceed automatically — do NOT ask for confirmation.
 
