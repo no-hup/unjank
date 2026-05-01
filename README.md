@@ -4,14 +4,15 @@ Agent skills for tracking and fixing screen rendering performance in Android, iO
 
 ## What This Does
 
-4 skills that give any developer a complete performance workflow:
+3 skills that surface screen rendering data from Firebase Performance — which screens are janky, how bad, and trending which direction:
 
 | Skill | Command | What it does |
 |-------|---------|-------------|
 | **perf-setup** | `/perf-setup` | Discovers Firebase/GCP config, validates BigQuery access, runs smoke test |
 | **perf-query** | `/perf-query` | Runs cost-optimized BigQuery queries for 30-day screen metrics |
 | **perf-dashboard** | `/perf-dashboard` | Generates interactive HTML dashboard (worst screens, highest volume, trends) |
-| **perf-fix** | `/perf-fix ScreenName` | Finds and fixes rendering anti-patterns in your code, safe changes first |
+
+> **Optional:** `/perf-fix ScreenName` — if you want to go beyond visibility and fix rendering anti-patterns in your code. Not required to get value from the tool.
 
 ## Quick Start
 
@@ -43,9 +44,15 @@ Skills register as slash commands on startup. **Start a new conversation** after
 
 ```
 /perf-setup              # one-time: auto-installs gcloud if needed, discovers config, validates BigQuery
-/perf-query              # fetches 30-day performance data
+/perf-query              # fetches 30-day performance data (~30 seconds)
 /perf-dashboard          # opens interactive dashboard in browser
-/perf-fix HomeFragment   # finds and fixes rendering issues for a screen
+```
+
+That's the full workflow. Dashboard shows your worst-performing screens, slow render %, frozen frame %, and 30-day trends.
+
+**Optional — if you want to fix issues too:**
+```
+/perf-fix HomeFragment   # finds and fixes rendering anti-patterns for a specific screen
 ```
 
 ## Prerequisites

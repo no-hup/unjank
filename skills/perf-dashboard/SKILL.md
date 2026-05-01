@@ -67,9 +67,9 @@ else echo "Open .perf/dashboard.html in your browser"
 fi
 ```
 
-## Step 4: Print Summary and Recommend Next Fix
+## Step 4: Print Summary
 
-Read `.perf/data/screen_summary.json`. Rank the top 5 worst screens by composite score (frozen * 0.6 + slow * 0.4). Then look at the source code for each — quickly scan if obvious anti-patterns exist (heavy `onBind`/`cellForRow`, main-thread image loading, nested layouts). Pick the one that has the highest composite score AND likely has easy wins in the code, and recommend it.
+Read `.perf/data/screen_summary.json`. Rank the top 5 worst screens by composite score (frozen * 0.6 + slow * 0.4).
 
 ```
 Dashboard generated at .perf/dashboard.html
@@ -86,12 +86,9 @@ Top 5 worst performing:
   3. {name} — frozen: {X}%, slow: {Y}%
   4. {name} — frozen: {X}%, slow: {Y}%
   5. {name} — frozen: {X}%, slow: {Y}%
-
-Recommended: Start with {name} — it has the worst metrics and I can see
-some quick wins in the code. Run: /perf-fix {name}
 ```
 
-If you can't quickly determine which has easy wins, just recommend the highest composite score screen.
+That's it — this is the end of the main workflow. If the developer wants to go further and fix issues in the code, they can run `/perf-fix {worst screen name}` as an optional next step. Do not suggest this unless they ask — the dashboard is the deliverable.
 
 ## Error Handling
 

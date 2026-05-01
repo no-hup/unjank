@@ -12,9 +12,9 @@ allowed-tools: Bash, Read, Grep, Write, Glob, Edit
 
 # Screen Rendering Performance Fixer
 
-Fix frozen frames and slow rendering for specific screens. Work one screen at a time. Apply safe fixes immediately, get one batch approval for behavioral changes, and leave architectural decisions as notes.
+> **Optional skill.** The main Unjank workflow is `/perf-setup` → `/perf-query` → `/perf-dashboard`. This skill goes one step further — use it when you want to act on what the dashboard showed you.
 
-## Core operating mode
+Fix frozen frames and slow rendering for a specific screen. Work one screen at a time. Apply safe fixes immediately, get one batch approval for behavioral changes, leave architectural decisions as notes.
 
 **Try first, surface only when stuck.** If you can figure something out (find the file, identify the pattern, apply the fix), do it. Only pause when you genuinely cannot proceed without a human decision. The only real decision the developer needs to make is approving Tier 2 fixes — everything else you handle.
 
