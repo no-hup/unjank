@@ -79,8 +79,7 @@ Display the cost estimate. Many frontend developers have never used BigQuery, so
   - If the 15-day estimate drops below 100 GB → proceed using 15 days instead of 30.
     Note to user: "Scan was large for 30 days — using last 15 days instead ({size} GB, ~${cost})."
   - If still > 100 GB → STOP. "Estimated scan is unusually large even for 15 days ({size} GB). This may indicate the table is not partitioned correctly."
-- \> 10 GB: WARN and ask: "Estimated scan is {size} GB (~${cost}). This is larger than typical. Proceed?"
-- <= 10 GB: proceed automatically — do NOT ask for confirmation.
+- < 100 GB: proceed automatically — show the estimate inline but do NOT ask for confirmation.
 
 ## Step 5: Execute Screen Summary Query
 
