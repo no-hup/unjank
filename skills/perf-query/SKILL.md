@@ -3,9 +3,11 @@ name: perf-query
 description: >
   Query Firebase Performance data from BigQuery for screen rendering metrics.
   Runs cost-optimized queries for 30-day screen summaries and daily trends.
-  TRIGGER when: user wants performance data, screen metrics, BigQuery results,
-  worst-performing screens, or asks to refresh/update performance data.
-  Requires /perf-setup to have been run first (checks for .perf/config.json).
+  TRIGGER when: user wants to fetch/refresh performance data, see screen metrics,
+  find worst-performing screens, or run BigQuery queries for rendering data.
+  SKIP if: user is asking about setup or configuration (use /perf-setup),
+  asking to visualize existing data (use /perf-dashboard), or asking to fix
+  a specific screen (use /perf-fix). Requires /perf-setup to have run first.
 allowed-tools: Bash, Read, Write
 ---
 
@@ -28,7 +30,7 @@ Read `.perf/config.json`. If the file doesn't exist, STOP: "No configuration fou
 
 Extract: `table_name`, `lookback_days`, `min_samples`, `min_daily_samples`, `max_screens`, `platform`, `app_id`, `gcp_project_id`.
 
-If `created_at` is older than 30 days, warn: "Configuration is {N} days old. Consider re-running `/perf-setup` to refresh."
+If `created_at` is older than 30 days, note it inline and continue: "Config is {N} days old — proceeding, but consider re-running `/perf-setup` if queries fail."
 
 ## Step 2: Verify Authentication
 

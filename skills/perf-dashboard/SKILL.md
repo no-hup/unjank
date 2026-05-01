@@ -3,9 +3,10 @@ name: perf-dashboard
 description: >
   Generate an interactive local HTML dashboard from Firebase Performance query results.
   Shows worst-performing screens, highest-volume screens, and 30-day trends with Chart.js.
-  TRIGGER when: user asks for a dashboard, visualization, chart, report, or HTML output
-  of performance data. Also trigger when user says "show me the results" or "open dashboard"
-  after running /perf-query. Requires /perf-query to have been run first (checks for .perf/data/).
+  TRIGGER when: user asks for a dashboard, visualization, chart, report, HTML output,
+  "show me the results", or "open dashboard" after running /perf-query.
+  SKIP if: user hasn't run /perf-query yet (no .perf/data/ exists), or if they're
+  asking to fetch new data (use /perf-query) or fix a screen (use /perf-fix).
 allowed-tools: Bash, Read, Write
 ---
 

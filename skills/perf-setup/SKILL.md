@@ -111,7 +111,11 @@ The script outputs JSON with these fields:
 
 **If platform = "UNKNOWN"**: STOP. Tell the developer: "Could not detect project platform. Are you in the root directory of an Android, iOS, or Flutter project?"
 
-**If platform = "FLUTTER"**: Ask the developer: "This is a Flutter project. Configure for **Android** or **iOS**?"
+**If platform = "FLUTTER"**: Before asking, auto-detect the target platform:
+- Check if `android/app/google-services.json` exists → select Android silently
+- Check if `ios/Runner/GoogleService-Info.plist` exists → select iOS silently
+- If both exist → ask: "Flutter project with Firebase configs for both Android and iOS. Which platform are you optimizing?"
+- If neither exists → ask: "Flutter project detected. Configure for Android or iOS? (You'll need a Firebase config file for that platform.)"
 
 **If gcp_project_id is empty**: Ask the developer: "Could not find Firebase config. Please provide your GCP Project ID (Firebase Console → Project Settings → General)."
 

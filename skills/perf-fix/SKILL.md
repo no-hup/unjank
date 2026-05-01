@@ -12,169 +12,223 @@ allowed-tools: Bash, Read, Grep, Write, Glob, Edit
 
 # Screen Rendering Performance Fixer
 
-Fix frozen frames and slow rendering for specific screens. You work one screen at a time, fix safe things first, and never change code without the developer's approval.
+Fix frozen frames and slow rendering for specific screens. Work one screen at a time. Apply safe fixes immediately, get one batch approval for behavioral changes, and leave architectural decisions as notes.
 
-## Why this ordering matters
+## Core operating mode
 
-Large codebases have many potential optimizations, but each change carries risk. Legacy code has implicit dependencies — a "simple" fix can break flows you can't see. The tier system below exists because **the safest, highest-impact fixes should land first**. This builds developer trust and delivers measurable improvement before attempting anything risky.
+**Try first, surface only when stuck.** If you can figure something out (find the file, identify the pattern, apply the fix), do it. Only pause when you genuinely cannot proceed without a human decision. The only real decision the developer needs to make is approving Tier 2 fixes — everything else you handle.
 
 ## Input
 
 The developer invokes: `/perf-fix ScreenName` (or up to 5 screen names separated by commas).
 
-If more than 5 screens are provided, respond: "Let's focus on up to 5 screens per session for accuracy. Which 5 are highest priority?"
+If more than 5 screens are provided: "Let's focus on up to 5 screens per session. Which 5 are highest priority?"
+
+---
+
+## Step 0: Check fix history
+
+Before anything else, look for `.perf/fix-history/{ScreenName}.json`.
+
+**If it exists**, read it and surface a one-line recap:
+```
+Previous session ({date}): Applied {N} fix(es) — {brief list}. Baseline was frozen={X}%, slow={Y}%.
+```
+Load the `applied` list into memory — you'll use it in Step 3 to skip already-fixed patterns and flag regressions.
+
+**If it doesn't exist**, proceed silently.
+
+---
 
 ## Step 1: Load performance metrics
 
-Read `.perf/data/screen_summary.json` for the target screen's metrics. If the file doesn't exist, tell the developer: "No performance data found. Run `/perf-query` first to fetch data from BigQuery."
+Read `.perf/data/screen_summary.json` for the target screen. If missing: "No performance data found. Run `/perf-query` first."
 
-Extract `frozen_frames_pct`, `slow_render_pct`, and `total_samples` for $ARGUMENTS.
+Extract `frozen_frames_pct`, `slow_render_pct`, `total_samples`.
 
-If the screen name isn't in the data, suggest close matches and ask the developer to confirm.
+If the screen name isn't found, suggest the 3 closest matches (fuzzy match on screen name) and ask which one.
 
-Classify the metric shape — this guides where to look first:
+If fix history exists, compute and show the delta:
+```
+Current: frozen={X}%, slow={Y}%  (was frozen={A}%, slow={B}% at last session — {improved/regressed/unchanged})
+```
+
+Classify the metric shape to guide where to look first:
 
 | Shape | Likely cause | Where to look first |
 |-------|-------------|-------------------|
-| High frozen, low slow | Blocking stall, startup work, sync I/O | Lifecycle callbacks, data loading, SDK init |
-| High slow, low frozen | Repeated per-frame work, image decode | Adapter/cell bind, layout complexity, draw code |
-| Both high | Mixed structural problem | List pipeline + startup path together |
+| High frozen, low slow | Blocking stall, sync I/O | Lifecycle callbacks, data loading, SDK init |
+| High slow, low frozen | Per-frame work, image decode | Adapter bind, layout complexity, draw code |
+| Both high | Mixed structural | List pipeline + startup path |
 
-Read [references/detection-patterns.md](references/detection-patterns.md) for the full grep patterns to use in step 3.
+---
 
 ## Step 2: Map screen to source files
 
-Find the source files that own this screen. Search in order of confidence:
+Find all source files that own this screen. Search systematically:
 
 **Android:**
-1. Glob for `**/{ScreenName}.kt`, `**/{ScreenName}.java` — exact Activity/Fragment match
-2. Grep for `class {ScreenName}` across `.kt` and `.java` files
-3. Check navigation graph XMLs for destination references
-
-Then walk outward to related files:
-- Layout XML: grep for `setContentView`, `inflate`, or Compose `@Composable` in the screen file
-- Adapter/ViewHolder: grep for `RecyclerView.Adapter`, `ListAdapter` references
-- ViewModel: grep for `viewModel`, `by viewModels`, `ViewModelProvider`
-- Image loading: grep for `Glide`, `Coil`, `Picasso`, `BitmapFactory` in the adapter
+1. `**/{ScreenName}.kt`, `**/{ScreenName}.java`
+2. `grep -r "class {ScreenName}"` across `.kt` and `.java`
+3. Navigation XML for destination references
+4. Walk outward: layout XML → adapter/ViewHolder → ViewModel → image loading calls
 
 **iOS:**
-1. Glob for `**/{ScreenName}.swift`, `**/{ScreenName}.m` — exact ViewController/View match
-2. Grep for `class {ScreenName}` across `.swift` files
-3. Check storyboards for scene identifiers
+1. `**/{ScreenName}.swift`, `**/{ScreenName}.m`
+2. `grep -r "class {ScreenName}"` across `.swift`
+3. Storyboards for scene identifiers
+4. Walk outward: cell classes → ViewModel/Coordinator → image loading
 
-Then walk outward to:
-- Cell classes: grep for `UITableViewCell`, `UICollectionViewCell` subclasses referenced in data source
-- ViewModel/Coordinator: grep for imports and property declarations
-- Image loading: grep for `UIImage`, `Data(contentsOf:)`, `Kingfisher`, `SDWebImage`
+**If you find files:** State them inline and move on — "Scanning HomeFragment.kt, HomeAdapter.kt, home_layout.xml..." — do not ask for confirmation.
 
-If you find the screen file but can't identify the platform, read the file to determine it.
+**If you find zero files after exhausting all strategies:** Then ask. "Couldn't locate source files for {ScreenName}. Is the screen named differently in code, or is it in a module I should look in?"
 
-List all discovered files to the developer before proceeding: "I found these files related to {ScreenName}: [list]. Does this look right, or am I missing anything?"
+---
 
 ## Step 3: Scan for anti-patterns
 
-Read [references/detection-patterns.md](references/detection-patterns.md) for the platform-specific grep patterns.
+Read [references/detection-patterns.md](references/detection-patterns.md) for platform-specific grep patterns.
 
-Run the relevant grep passes against ALL discovered files from step 2. For each hit, note:
-- The file and line number
-- Which anti-pattern it matches
-- Its tier (T1, T2, T3, or T4)
+Run all relevant grep passes against discovered files. For each hit, note: file, line, pattern ID, tier.
 
-Do NOT read the full knowledge base yet — only load [references/knowledge-base.md](references/knowledge-base.md) if you need deeper context on a specific pattern.
+**If fix history exists:** For each detected pattern:
+- If it's in the `applied` list from last session → mark as **REGRESSION** (was fixed, now re-detected) instead of a normal finding
+- If it's in the `skipped` list (T3/T4 from last session) → include normally, they were never applied
 
-## Step 4: Present findings by tier
+Only load [references/knowledge-base.md](references/knowledge-base.md) if you need deeper context on a specific pattern.
 
-Group all findings and present them to the developer in this exact structure:
+---
+
+## Step 4: Present findings and apply Tier 1
+
+Organize findings by tier and present them:
 
 ```
 ## Performance Analysis: {ScreenName}
 Metrics: frozen={X}%, slow={Y}%, samples={N}
+[If history: ↓ from frozen={A}%, slow={B}% last session]
 
-### SAFE TO FIX NOW (Tier 1)
-These are pure, mechanical transforms with no behavioral side effects.
-I can apply these immediately if you approve.
+### TIER 1 — Applying now (safe mechanical transforms)
+1. [file:line] — {issue description}
+   Fix: {one-line description}
 
-1. [file:line] — {description of issue}
-   Fix: {one-line description of the fix}
+### TIER 2 — Need your approval (changes loading/async behavior)
+1. [file:line] — {issue description}
+   Fix: {description} | Trade-off: {what changes}
 
-2. [file:line] — {description}
-   Fix: {description}
+### TIER 3 — For discussion (high-impact, high-risk)
+1. [file:line] — {description} | Why it needs discussion: {reason}
 
-### FIX WITH REVIEW (Tier 2)
-These improve performance but change some behavior (loading UX, async flow).
-I'll show you the diff and explain trade-offs before applying.
-
-1. [file:line] — {description}
-   Fix: {description}
-   Trade-off: {what changes}
-
-### SUGGESTIONS FOR DISCUSSION (Tier 3)
-High-impact but high-risk changes. These need your input on product/design tradeoffs.
-
-1. [file:line] — {description}
-   Recommended fix: {description}
-   Why this needs discussion: {explanation}
-
-### NOTED FOR FUTURE (Tier 4)
-These require architectural changes. Noting for your team's backlog.
-
+### TIER 4 — Team backlog (architectural)
 - [file:line] — {brief description}
 ```
 
-If a tier has no findings, omit it entirely.
+Omit any tier with no findings.
 
-After presenting, ask: "Which tier would you like me to work on? I recommend starting with Tier 1."
+**Immediately after presenting:** Apply all Tier 1 fixes without waiting. Say "Applying Tier 1 fixes..." and do it. Show a single combined diff at the end.
 
-## Step 5: Apply fixes (only on approval)
+If there are **REGRESSION** findings (patterns re-detected after prior fix), call them out prominently:
+```
+⚠ REGRESSION: sync_image_load re-detected in HomeAdapter.kt:47 — this was fixed last session. Check if the fix was reverted.
+```
 
-**For Tier 1:** When the developer approves, apply ALL T1 fixes. Show the diff for each file changed. After applying, summarize: "Applied {N} Tier 1 fixes across {M} files."
+---
 
-**For Tier 2:** Apply ONE fix at a time. For each:
-1. Show the full diff before applying
-2. Explain the trade-off clearly
-3. Wait for explicit "yes" / "go ahead" / approval
-4. Apply and confirm
+## Step 5: Tier 2 batch approval
 
-**For Tier 3:** Do NOT generate code unless the developer explicitly asks. Only explain the issue, the standard fix pattern, and what would change. If they ask you to draft it, show the code but let them apply it.
+If there are Tier 2 findings, show all diffs together:
 
-**For Tier 4:** Never attempt. Just list them.
+```
+--- Tier 2 diffs ---
+
+[1] HomeFragment.kt:23 — Move network call off main thread
+  - val data = api.fetch()  // blocking
+  + lifecycleScope.launch { val data = withContext(Dispatchers.IO) { api.fetch() } }
+  Trade-off: loading state will show briefly before data arrives
+
+[2] ...
+
+Apply Tier 2 fixes? Reply: all / 1,2 / skip
+```
+
+Apply exactly what they approve. If they say "skip" or don't respond to a fix, note it in the history as `declined`.
+
+**Tier 3:** Explain the issue and standard fix pattern. Do not generate code unless they explicitly ask. If they ask, show it but let them apply it.
+
+**Tier 4:** Never attempt. Listed only.
+
+---
 
 ## Step 6: Summary
-
-After all approved fixes are applied, output:
 
 ```
 ## Summary: {ScreenName}
 
 ### Applied
 - [T1] {description} — {file}
-- [T1] {description} — {file}
-- [T2] {description} — {file}
+- [T2] {description} — {file}  (if approved)
 
 ### Suggested (not applied)
-- [T3] {description} — needs discussion with screen owner
+- [T3] {description} — needs discussion
 - [T4] {description} — architectural, for team backlog
 
 ### Verification
-To verify the impact of these changes:
-- Android: run Macrobenchmark or check Firebase Performance after next release
-- iOS: run XCTest performance tests or check Xcode Organizer metrics
+Run after next release:
+- Android: Firebase Performance Console → Screen Rendering, or Macrobenchmark
+- iOS: Xcode Organizer metrics, or Firebase Performance Console
 ```
+
+---
+
+## Step 7: Write fix history
+
+Write (or update) `.perf/fix-history/{ScreenName}.json`:
+
+```json
+{
+  "screen_name": "{ScreenName}",
+  "sessions": [
+    {
+      "date": "{ISO timestamp}",
+      "baseline": {
+        "frozen_pct": 0.0,
+        "slow_pct": 0.0,
+        "samples": 0
+      },
+      "applied": [
+        {
+          "tier": 1,
+          "file": "HomeAdapter.kt",
+          "line": 47,
+          "pattern": "sync_image_load",
+          "description": "Moved Glide load off bind method"
+        }
+      ],
+      "declined": ["pattern_id"],
+      "skipped_tiers": ["nested_layout_depth"]
+    }
+  ]
+}
+```
+
+If the file already exists, **append** the new session to the `sessions` array — never overwrite prior sessions. Keep last 5 sessions max (drop oldest).
+
+---
 
 ## Stop conditions
 
 Stop and tell the developer instead of proceeding when:
 
-- The suspected problematic code is in a third-party library or SDK (not the team's code)
-- The fix would change user-visible behavior (loading states, animation, data freshness)
-- You're not confident in the screen-to-code mapping (say so explicitly)
-- Multiple root causes are tangled together and the smallest safe change isn't clear
-- The code is generated or heavily meta-programmed (e.g., code-gen from Protobuf/GraphQL)
+- The problematic code is in a third-party library (not team's code)
+- A fix would change user-visible behavior AND you can't fully characterize the trade-off
+- You found zero files after all search strategies
+- Multiple root causes are tangled and the smallest safe change isn't clear
+- Code is generated (Protobuf/GraphQL codegen) — flag it, don't touch it
 
-## Reference files
+---
 
-These are loaded on demand — do not read them all upfront:
+## Reference files (load on demand)
 
-- [references/detection-patterns.md](references/detection-patterns.md) — grep patterns organized by platform and tier. **Read this in Step 3.**
-- [references/knowledge-base.md](references/knowledge-base.md) — full anti-pattern catalog with mechanisms and fix templates. **Read specific sections when you need deeper context on a pattern you found.**
-- [references/fix-templates.md](references/fix-templates.md) — before/after code examples for common fixes. **Read when applying T1/T2 fixes to ensure correctness.**
+- [references/detection-patterns.md](references/detection-patterns.md) — grep patterns by platform and tier. **Read in Step 3.**
+- [references/knowledge-base.md](references/knowledge-base.md) — full anti-pattern catalog. **Read only for specific patterns you need deeper context on.**
+- [references/fix-templates.md](references/fix-templates.md) — before/after code examples. **Read when applying T1/T2 fixes.**
