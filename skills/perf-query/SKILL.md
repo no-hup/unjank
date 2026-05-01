@@ -75,10 +75,10 @@ Display the cost estimate. Many frontend developers have never used BigQuery, so
 "Estimated scan: **{X} GB** (~${Y}). For context: Google BigQuery gives you **1 TB of free queries per month** — this is well within that. Typical Unjank runs scan 0.5–2 GB, so you'd need to run this 500+ times in a month before any charges apply."
 
 **Cost gates:**
-- \> 100 GB: Before stopping, silently retry the dry-run with `BQ_DAYS=15`.
-  - If the 15-day estimate drops below 100 GB → proceed using 15 days instead of 30.
-    Note to user: "Scan was large for 30 days — using last 15 days instead ({size} GB, ~${cost})."
-  - If still > 100 GB → STOP. "Estimated scan is unusually large even for 15 days ({size} GB). This may indicate the table is not partitioned correctly."
+- \> 100 GB: Before stopping, silently retry with a narrower window:
+  1. Retry with `BQ_DAYS=15` — if below 100 GB, proceed. Note: "30-day scan was large — using last 15 days ({size} GB, ~${cost})."
+  2. Still > 100 GB → retry with `BQ_DAYS=7` — if below 100 GB, proceed. Note: "Using last 7 days ({size} GB, ~${cost})."
+  3. Still > 100 GB → STOP and involve the user. "Estimated scan is unusually large even for 7 days ({size} GB). This may indicate the table is not partitioned correctly. Check BigQuery → firebase_performance dataset and confirm partition pruning is working."
 - < 100 GB: proceed automatically — show the estimate inline but do NOT ask for confirmation.
 
 ## Step 5: Execute Screen Summary Query
