@@ -72,10 +72,10 @@ Each dry-run outputs `{"bytes_processed": N}`. Sum the bytes across all queries.
 
 Display the cost estimate. Many frontend developers have never used BigQuery, so briefly explain:
 
-"Estimated scan: **{X} GB** (~${Y}). For context: Google BigQuery gives you **1 TB of free queries per month** — this is well within that. Typical Unjank runs scan 0.5–2 GB, so you'd need to run this 500+ times in a month before any charges apply."
+"Estimated scan: **{X} GB** (~${Y}). For context: Google BigQuery gives you **1 TB of free queries per month**. Single-app scans range from <1 GB on small apps up to 100+ GB on high-traffic apps with broad screen instrumentation — either end stays well inside the free tier for typical use."
 
-**Cost gates:**
-- \> 100 GB: Before stopping, silently retry with a narrower window:
+**Cost gates** (all thresholds apply to the **combined dry-run total** across every query in this step, not per-query):
+- \> 100 GB total: Before stopping, silently retry with a narrower window:
   1. Retry with `BQ_DAYS=15` — if below 100 GB, proceed. Note: "30-day scan was large — using last 15 days ({size} GB, ~${cost})."
   2. Still > 100 GB → retry with `BQ_DAYS=7` — if below 100 GB, proceed. Note: "Using last 7 days ({size} GB, ~${cost})."
   3. Still > 100 GB → STOP and involve the user. "Estimated scan is unusually large even for 7 days ({size} GB). This may indicate the table is not partitioned correctly. Check BigQuery → firebase_performance dataset and confirm partition pruning is working."
@@ -153,7 +153,7 @@ Query complete:
 Run /perf-dashboard to generate the visual dashboard.
 ```
 
-Compare last 7 days average vs previous 23 days to determine trend direction.
+Compare recent days against earlier days within the actual window to determine trend direction. Pick a split that fits the lookback (e.g. last third vs first two-thirds for a 30-day window). If the window is too narrow to split meaningfully (cost-gate retries can bring it down to 7 days), report direction from available data and note the limited window in the summary.
 
 ## Error Handling
 
