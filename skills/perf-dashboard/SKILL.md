@@ -69,7 +69,9 @@ fi
 
 ## Step 4: Print Summary
 
-Read `.perf/data/screen_summary.json`. Rank the top 5 worst screens by composite score (frozen * 0.6 + slow * 0.4).
+Read `.perf/data/screen_summary.json`. Each row has fields: `screen_name`, `frozen_frames_pct`, `slow_render_pct`, `total_samples`, plus a daily breakdown. Numeric fields come back as strings — cast with `float()` before arithmetic.
+
+Rank the top 5 worst screens by composite score (frozen * 0.6 + slow * 0.4). For "highest volume," sort descending on `total_samples`.
 
 ```
 Dashboard generated at .perf/dashboard.html

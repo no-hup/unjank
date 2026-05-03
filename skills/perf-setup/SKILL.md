@@ -155,7 +155,12 @@ The script outputs JSON. Handle each field:
 - `active_account`: Only flag if there's an obvious mismatch (e.g., `@gmail.com` account on a corporate project, or vice versa). Otherwise proceed silently.
 - `adc_valid = false`: Run `gcloud auth application-default login` automatically.
 - `bq_installed = false`: Run `gcloud components install bq --quiet` automatically.
-- `table_exists = false`: STOP. "BigQuery table not found. BigQuery export likely isn't enabled. Go to **Firebase Console → Settings → Integrations → BigQuery** and enable it. Data takes 24-48 hours to appear."
+- `table_exists = false`: read the `table_error` field — it contains the raw `bq show` stderr verbatim, not a translation. The cause is **usually one of**:
+  - **(a) IAM** — the active gcloud account lacks BigQuery permission on this project. `gcloud auth list` shows what other accounts are configured locally; an obvious mismatch (e.g. a personal `@gmail.com` account active on a corporate GCP project) often points the way. If the right account is already active, ask the project admin for `roles/bigquery.dataViewer`.
+  - **(b) Firebase BigQuery export not enabled** — the table genuinely isn't there. Go to **Firebase Console → Settings → Integrations → BigQuery** and enable it. Data takes 24-48 hours to appear after the first enable.
+  - **(c) Wrong table name construction** — re-check Step 4 against `firebase_performance.{sanitized_appId}_{PLATFORM}`.
+  
+  Pick the branch that matches the raw error in `table_error`. Don't assume — the same `bq show` failure can mean any of the three, and the text of the stderr is the only reliable signal.
 - `smoke_test_count = 0`: WARNING (don't block): "Table exists but no screen trace data in the last 7 days. If recently enabled, data can take up to 48 hours."
 - `smoke_test_count > 0`: Proceed. Briefly note: "Found {count} screen traces in the last 7 days."
 

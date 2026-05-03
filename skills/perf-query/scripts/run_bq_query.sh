@@ -53,7 +53,9 @@ if ! [[ "$MIN_SAMPLES" =~ ^[0-9]+$ ]]; then
   echo "Error: BQ_MIN_SAMPLES must be a number (got: $MIN_SAMPLES)" >&2; exit 1
 fi
 # Validate table name format (project.dataset.table)
-if ! echo "$TABLE" | grep -qP '^[a-z0-9_-]+\.[a-z0-9_]+\.[a-z0-9_]+$'; then
+# POSIX ERE — BSD grep on macOS has no -P. Allow uppercase because Firebase
+# Performance tables include the platform suffix (_ANDROID, _IOS) verbatim.
+if ! echo "$TABLE" | grep -qE '^[a-zA-Z0-9_-]+\.[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+$'; then
   echo "Warning: Table name '$TABLE' has unexpected format. Expected: project.dataset.table" >&2
 fi
 
@@ -79,8 +81,9 @@ fi
 # Dry run mode
 if [ "$DRY_RUN" = "--dry-run" ]; then
   RESULT=$(bq query --nouse_legacy_sql --dry_run "$SQL" 2>&1)
-  # Extract bytes processed
-  BYTES=$(echo "$RESULT" | grep -oP '\d+' | tail -1 || echo "0")
+  # Extract bytes processed — POSIX ERE so this works on macOS BSD grep.
+  # Without this, the cost gate silently sees 0 bytes and never fires.
+  BYTES=$(echo "$RESULT" | grep -oE '[0-9]+' | tail -1 || echo "0")
   echo "{\"bytes_processed\": $BYTES, \"sql_length\": ${#SQL}}"
   exit 0
 fi

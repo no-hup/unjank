@@ -69,13 +69,18 @@ if command -v bq >/dev/null 2>&1; then
 fi
 
 # ---- Check BigQuery table exists ----
+# When this fails, surface the raw bq stderr verbatim. Don't translate it into
+# a single message — the caller (perf-setup SKILL.md Step 4) needs the real
+# error to dispatch between IAM, missing-export, and wrong-name causes.
 TABLE_EXISTS="false"
 TABLE_ERROR=""
 SMOKE_TEST_COUNT=0
 if [ "$BQ_INSTALLED" = "true" ] && [ -n "$TABLE_NAME" ]; then
   # Convert dot notation to colon notation for bq show
   BQ_TABLE=$(echo "$TABLE_NAME" | sed 's/\./:/1')
-  if bq show --format=json "$BQ_TABLE" >/dev/null 2>&1; then
+  # Capture stderr (2>&1 >/dev/null swap), discard stdout JSON. On success
+  # BQ_SHOW_STDERR is empty; on failure it carries the real reason.
+  if BQ_SHOW_STDERR=$(bq show --format=json "$BQ_TABLE" 2>&1 >/dev/null); then
     TABLE_EXISTS="true"
 
     # Run smoke test
@@ -88,9 +93,13 @@ data = json.load(sys.stdin)
 print(data[0].get('cnt', 0) if data else 0)
 " 2>/dev/null || echo "0")
   else
-    TABLE_ERROR="Table not found. Enable BigQuery export in Firebase Console > Settings > Integrations > BigQuery."
+    TABLE_ERROR="$BQ_SHOW_STDERR"
   fi
 fi
+
+# JSON-encode TABLE_ERROR so newlines/quotes in raw bq output don't break the
+# output JSON. Falls back to "" when the table existed and there was no error.
+TABLE_ERROR_JSON=$(printf '%s' "$TABLE_ERROR" | python3 -c "import json,sys;print(json.dumps(sys.stdin.read()))" 2>/dev/null || echo '""')
 
 cat <<EOF
 {
@@ -103,7 +112,7 @@ cat <<EOF
   "adc_valid": $ADC_VALID,
   "bq_installed": $BQ_INSTALLED,
   "table_exists": $TABLE_EXISTS,
-  "table_error": "$TABLE_ERROR",
+  "table_error": $TABLE_ERROR_JSON,
   "smoke_test_count": $SMOKE_TEST_COUNT
 }
 EOF

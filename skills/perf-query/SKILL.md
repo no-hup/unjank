@@ -98,7 +98,9 @@ Extract the **top 10 screens** by composite score from screen_summary.json:
 TOP=$(python3 -c "
 import json
 data = json.load(open('.perf/data/screen_summary.json'))
-ranked = sorted(data, key=lambda s: s['frozen_frames_pct']*0.6 + s['slow_render_pct']*0.4, reverse=True)[:10]
+# BigQuery's JSON output serialises numerics as strings; cast before arithmetic
+# or sorted() raises TypeError mid-pipeline.
+ranked = sorted(data, key=lambda s: float(s['frozen_frames_pct'])*0.6 + float(s['slow_render_pct'])*0.4, reverse=True)[:10]
 print(','.join(s['screen_name'] for s in ranked))
 ")
 ```
@@ -133,6 +135,8 @@ Write `.perf/data/query_metadata.json`:
   "table_name": "{table_name}"
 }
 ```
+
+**Sanity check before writing:** if the dry-run reported `bytes_processed: 0` but the queries returned rows (so they clearly scanned *something*), the cost extraction failed upstream rather than the queries being free. In that case, write `"bytes_scanned": null`, `"estimated_cost_usd": null`, and add `"cost_estimation_failed": true`. Don't write `0` — auditors reading this metadata downstream will treat zero as ground truth and miss real spend.
 
 ## Step 9: Print Summary
 
