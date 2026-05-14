@@ -1,0 +1,70 @@
+- main [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e4]: Unjank
+    - generic [ref=e6]:
+      - generic [ref=e7]:
+        - generic [ref=e8]: Application
+        - generic [ref=e9]: com.acme.payapp
+      - generic [ref=e10]:
+        - generic [ref=e11]: Data Source
+        - generic [ref=e12]: acme-prod-1a.firebase_performance.com_acme_payapp_ANDROID
+    - generic [ref=e13]:
+      - generic [ref=e14]: 2026-05-03T22:03:54Z
+      - generic [ref=e15]: ANDROID
+  - generic [ref=e16]:
+    - generic [ref=e17]:
+      - generic [ref=e18]: Screens Monitored
+      - generic [ref=e19]: "50"
+      - generic [ref=e20]: Total distinct screens present in the current result set.
+    - generic [ref=e21]:
+      - generic [ref=e22]: Worst Frozen Rate
+      - generic [ref=e23]: 32.2%
+      - generic [ref=e24]: Highest frozen-frame percentage across monitored screens.
+    - generic [ref=e25]:
+      - generic [ref=e26]: Worst Slow Render Rate
+      - generic [ref=e27]: 91.3%
+      - generic [ref=e28]: Highest slow-render percentage captured in the summary view.
+    - generic [ref=e29]:
+      - generic [ref=e30]: Data Freshness
+      - generic [ref=e31]: 4 May 2026
+      - generic [ref=e32]: Most recent query execution time recorded in metadata.
+  - generic [ref=e33]:
+    - generic [ref=e34]:
+      - generic [ref=e35] [cursor=pointer]: 30-Day Trends
+      - generic [ref=e36] [cursor=pointer]: Worst Performing
+      - generic [ref=e37] [cursor=pointer]: Highest Volume
+    - generic [ref=e39]:
+      - generic [ref=e41]:
+        - generic [ref=e42]:
+          - generic [ref=e43]: Application Trend
+          - heading "Rendering health over time" [level=3] [ref=e44]
+        - paragraph [ref=e45]: A 30-day view of aggregate rendering quality across the app, intended to reveal sustained drift rather than isolated spikes.
+      - generic [ref=e48]:
+        - generic [ref=e49]:
+          - generic [ref=e50]:
+            - generic [ref=e51]: Screen Detail
+            - heading "Top screen sparklines" [level=3] [ref=e52]
+          - paragraph [ref=e53]: Daily frozen-frame movement for the five most severe screens, presented as compact directional signals.
+        - generic [ref=e54]:
+          - generic [ref=e56]:
+            - generic "UpdatePromptActivity" [ref=e57]
+            - generic [ref=e58]: Frozen 17.6%
+          - generic [ref=e61]:
+            - generic "SplashActivity" [ref=e62]
+            - generic [ref=e63]: Frozen 32.2%
+          - generic [ref=e66]:
+            - generic "BackgroundTxnFragment" [ref=e67]
+            - generic [ref=e68]: Frozen 2.3%
+          - generic [ref=e71]:
+            - generic "BackgroundSyncActivity" [ref=e72]
+            - generic [ref=e73]: Frozen 2.2%
+          - generic [ref=e76]:
+            - generic "RouterFragment" [ref=e77]
+            - generic [ref=e78]: Frozen 2.9%
+  - generic [ref=e80]:
+    - strong [ref=e81]: Table
+    - text: ": acme-prod-1a.firebase_performance.com_acme_payapp_ANDROID ·"
+    - strong [ref=e82]: Query cost
+    - text: ": $0.215 ·"
+    - strong [ref=e83]: Coverage
+    - text: ": 2026-04-27 to 2026-05-01"
